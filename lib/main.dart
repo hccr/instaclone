@@ -1,13 +1,15 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:insta_clone/model/unSplashModel.dart';
+import 'package:insta_clone/service/UnSplashService.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 void main() => runApp(InstaClone());
 
 int _selectedIndex = 0;
 const TextStyle optionStyle =
     TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
+const loadingColor = Color.fromRGBO(220, 220, 220, 1.0);
 
 class InstaClone extends StatelessWidget {
   // This widget is the root of your application.
@@ -32,17 +34,54 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  List<UnSplashUser> _users;
+  List<Photo> _photosList;
+
+  @override
+  void initState() {
+    super.initState();
+
+    UnSplashService unSplashService = UnSplashService();
+    unSplashService.getUser("hc_cr").then((v) => print(v));
+
+    unSplashService.getRandomPhoto().then((photo) {
+      print("We get a photo");
+    });
+
+    unSplashService.getPhotos().then((photos) {
+      List<UnSplashUser> photosUsers = List();
+
+      photos.forEach((p) {
+        photosUsers.add(p.user);
+      });
+
+      setState(() {
+        _users = photosUsers;
+        _photosList = photos;
+      });
+    });
+  }
+
   Widget _getHistory() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          for (var i = 0; i < 10; i++) HistoryWidget("@user$i")
-        ],
-      ),
+    ListView listView;
+    if (_users == null || _users.isEmpty) {
+      listView = ListView(
+        scrollDirection: Axis.horizontal,
+        children: <Widget>[for (var i = 0; i < 10; i++) HistoryWidget(null)],
+      );
+    } else {
+      listView = ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _users.length,
+        itemBuilder: (context, index) {
+          return HistoryWidget(_users[index]);
+        },
+      );
+    }
+
+    return Container(
+      height: 100.0,
+      child: listView,
     );
   }
 
@@ -62,23 +101,44 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _getHomeBody() {
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _getHistory(),
-          Divider(),
-          for (var i = 0; i < 10; i++) PostWidget("@user$i")
-        ],
-      ),
+
+    List <dynamic> contentList = List();
+    contentList.add(_getHistory());
+    contentList.add(Divider());
+
+
+
+
+    if (_photosList == null || _photosList.isEmpty) {
+      for(var i = 0; i < 10; i++){
+        contentList.add(null);
+      }
+    } else {
+      contentList.addAll(_photosList);
+
+    }
+
+
+    return ListView.builder(
+
+      scrollDirection: Axis.vertical,
+      itemCount: contentList.length,
+      itemBuilder: (context, index) {
+        if(index==0 || index == 1) {
+          return contentList[index];
+        }else{
+
+          return PostWidget(contentList[index]);
+        }
+
+      },
     );
+
+
+
   }
 
   Widget _getActivityBody() {
-    Random random = Random();
-
     double heightSeparator = 20.0;
     var entries = <Widget>[];
     entries.add(ListTile(
@@ -86,7 +146,7 @@ class _MyHomePageState extends State<MyHomePage> {
         constraints: BoxConstraints.tight(Size(70.0, 70.0)),
         child: Container(
           decoration:
-              BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
+              BoxDecoration(color: loadingColor, shape: BoxShape.circle),
         ),
       ),
       title: Text("Follow Requests"),
@@ -111,10 +171,8 @@ class _MyHomePageState extends State<MyHomePage> {
         leading: ConstrainedBox(
           constraints: BoxConstraints.tight(Size(70.0, 70.0)),
           child: Container(
-            decoration: BoxDecoration(
-                color: Color.fromARGB(255, random.nextInt(256),
-                    random.nextInt(256), random.nextInt(256)),
-                shape: BoxShape.circle),
+            decoration:
+                BoxDecoration(color: loadingColor, shape: BoxShape.circle),
           ),
         ),
         title: Text("You liked 3 post tagged this week"),
@@ -156,10 +214,8 @@ class _MyHomePageState extends State<MyHomePage> {
         leading: ConstrainedBox(
           constraints: BoxConstraints.tight(Size(70.0, 70.0)),
           child: Container(
-            decoration: BoxDecoration(
-                color: Color.fromARGB(255, random.nextInt(256),
-                    random.nextInt(256), random.nextInt(256)),
-                shape: BoxShape.circle),
+            decoration:
+                BoxDecoration(color: loadingColor, shape: BoxShape.circle),
           ),
         ),
         title: Text("You liked 3 post tagged this week"),
@@ -197,10 +253,8 @@ class _MyHomePageState extends State<MyHomePage> {
         leading: ConstrainedBox(
           constraints: BoxConstraints.tight(Size(70.0, 70.0)),
           child: Container(
-            decoration: BoxDecoration(
-                color: Color.fromARGB(255, random.nextInt(256),
-                    random.nextInt(256), random.nextInt(256)),
-                shape: BoxShape.circle),
+            decoration:
+                BoxDecoration(color: loadingColor, shape: BoxShape.circle),
           ),
         ),
         title: Text("You liked 3 post tagged this week"),
@@ -230,7 +284,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _getProfileBody() {
     double boxSize = 100.0;
-
 
     return CustomScrollView(
       slivers: <Widget>[
@@ -262,8 +315,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         Text("21",
-                            style:
-                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
                         Text("Post")
                       ],
                     ),
@@ -274,8 +327,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         Text("340",
-                            style:
-                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
                         Text("Followers")
                       ],
                     ),
@@ -286,8 +339,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         Text("713",
-                            style:
-                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
                         Text("Folowing")
                       ],
                     ),
@@ -302,12 +355,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 padding: const EdgeInsets.only(left: 8.0),
                 child: Text("www.github.com"),
               ),
-
               Padding(
                 padding: const EdgeInsets.all(15.0),
                 child: OutlineButton(
-                  onPressed: (){print("Edit profile");},
-                  child: SizedBox.fromSize(size: Size(double.infinity,null),
+                  onPressed: () {
+                    print("Edit profile");
+                  },
+                  child: SizedBox.fromSize(
+                    size: Size(double.infinity, null),
                     child: Center(child: Text('Raised Button')),
                   ),
                 ),
@@ -344,7 +399,6 @@ class _MyHomePageState extends State<MyHomePage> {
             childCount: 20,
           ),
         ),
-
       ],
     );
   }
@@ -498,33 +552,61 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class HistoryWidget extends StatefulWidget {
-  HistoryWidget(this.text);
-  final String text;
+  HistoryWidget(this.user);
+
+  final UnSplashUser user;
 
   @override
   _HistoryWidgetState createState() => _HistoryWidgetState();
 }
 
 class _HistoryWidgetState extends State<HistoryWidget> {
-  final double boxSize = 80.0;
+  final double boxSize =80.0;
 
   @override
   Widget build(BuildContext context) {
+    BoxDecoration boxDecoration;
+
+    if (widget.user == null) {
+      boxDecoration = BoxDecoration(
+        color: loadingColor,
+        shape: BoxShape.circle,
+      );
+    } else {
+      boxDecoration = BoxDecoration(
+          color: loadingColor,
+          shape: BoxShape.circle,
+          image: new DecorationImage(
+              fit: BoxFit.fitHeight,
+              image: CachedNetworkImageProvider(
+                  widget.user.profileImage["large"])));
+    }
+
     return Column(
       children: <Widget>[
         ConstrainedBox(
           constraints: BoxConstraints.tight(Size(boxSize, boxSize)),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0),
+            padding: const EdgeInsets.all(8.0),
             child: Container(
-              decoration: BoxDecoration(
-                  color: Colors.greenAccent, shape: BoxShape.circle),
+              height: 50.0,
+              width: 50.0,
+              decoration: boxDecoration,
             ),
           ),
         ),
-        Text(
-          widget.text,
-          style: TextStyle(fontSize: 12.0, color: Colors.black87),
+        ConstrainedBox(
+          constraints: BoxConstraints.tightFor(width: boxSize),
+          child: Text(
+            widget.user != null ? widget.user.username : "loading",
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12.0,
+              color: Colors.black87,
+            ),
+          ),
         )
       ],
     );
@@ -532,8 +614,8 @@ class _HistoryWidgetState extends State<HistoryWidget> {
 }
 
 class PostWidget extends StatefulWidget {
-  PostWidget(this.user);
-  final String user;
+  PostWidget(this.photo);
+  final Photo photo;
 
   @override
   _PostWidgetState createState() => _PostWidgetState();
@@ -545,7 +627,75 @@ class _PostWidgetState extends State<PostWidget> {
 
   @override
   Widget build(BuildContext context) {
-    Random random = new Random();
+    
+    var now = DateTime.now();
+    
+    String textTimeAgo = "";
+    BoxDecoration boxDecoration;
+    BoxDecoration boxDecorationPhoto;
+    if (widget.photo == null) {
+      boxDecoration = BoxDecoration(
+        color: loadingColor,
+        shape: BoxShape.circle,
+      );
+      boxDecorationPhoto = BoxDecoration(
+        color: loadingColor,
+        shape: BoxShape.circle,
+      );
+    } else {
+      var duration = now.difference(widget.photo.updatedAt);
+
+      int auxTime;
+
+      if(duration.inDays>7){
+        auxTime = (duration.inDays/7).truncate();
+        if(auxTime==1){
+          textTimeAgo = "$auxTime week ago";
+        }else{
+          textTimeAgo = "$auxTime weeks ago";
+        }
+      }else if(duration.inDays>1){
+        textTimeAgo = "${duration.inDays} days ago";
+      }else if(duration.inDays == 1){
+        textTimeAgo = "${duration.inDays} day ago";
+      }else {
+        if(duration.inHours>1){
+          textTimeAgo = "${duration.inHours} hours ago";
+        }else if(duration.inHours==1){
+          textTimeAgo = "${duration.inHours} hour ago";
+        }else {
+          if(duration.inMinutes>1){
+            textTimeAgo = "${duration.inMinutes} minutes ago";
+          }else if(duration.inMinutes==1){
+            textTimeAgo = "${duration.inMinutes} minute ago";
+          }else{
+            textTimeAgo = "0 minute ago";
+          }
+        }
+      }
+      
+
+      
+      boxDecoration = BoxDecoration(
+          color: loadingColor,
+          shape: BoxShape.circle,
+          image: new DecorationImage(
+              fit: BoxFit.fitHeight,
+              image: CachedNetworkImageProvider(
+                  widget.photo.user.profileImage["large"])));
+
+      boxDecorationPhoto = BoxDecoration(
+          color: loadingColor,
+          shape: BoxShape.rectangle,
+          image: new DecorationImage(
+              fit: BoxFit.fitHeight,
+              image: CachedNetworkImageProvider(
+                  widget.photo.urls["raw"]+"&fit=crop&w=1080&h=1080&ar=1:1&crop=faces")));
+    }
+
+
+
+
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints viewportConstraints) {
       return Column(
@@ -562,12 +712,11 @@ class _PostWidgetState extends State<PostWidget> {
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Container(
-                    decoration: BoxDecoration(
-                        color: Colors.blueAccent, shape: BoxShape.circle),
+                    decoration: boxDecoration,
                   ),
                 ),
               ),
-              Expanded(child: Text(widget.user)),
+              Expanded(child: Text((widget.photo!=null)?widget.photo.user.username:"...")),
               IconButton(
                   onPressed: () {
                     print("More");
@@ -583,9 +732,8 @@ class _PostWidgetState extends State<PostWidget> {
             child: Padding(
               padding: const EdgeInsets.all(0.0),
               child: Container(
-                color: Color.fromARGB(255, random.nextInt(256),
-                    random.nextInt(256), random.nextInt(256)),
-              ),
+                decoration: boxDecorationPhoto,
+          ),
             ),
           ),
 
@@ -625,8 +773,7 @@ class _PostWidgetState extends State<PostWidget> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  "21 likes",
+                Text( widget.photo!=null?"${widget.photo.likes} likes":"",
                   style: TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold),
                 ),
                 GestureDetector(
@@ -635,9 +782,7 @@ class _PostWidgetState extends State<PostWidget> {
                       _wrap = !_wrap;
                     });
                   },
-                  child: Text(
-                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam finibus ex ac sapien consectetur ultricies. Mauris iaculis iaculis enim et fermentum. Donec magna nibh, feugiat a porta non, ultrices sed quam. Fusce quis mauris ac orci fermentum ullamcorper. Mauris at nunc ornare, porttitor dolor sed, varius purus. Quisque eu ex non velit interdum euismod ut a metus. Integer eu eros imperdiet, pellentesque ipsum malesuada, feugiat tortor. Maecenas in est imperdiet, ultricies purus sit amet, vulputate felis. Maecenas vel ante finibus, auctor massa non, suscipit tortor. Morbi vestibulum neque eget ex tincidunt, ac condimentum nisl molestie. Ut ultrices diam at dolor luctus, nec tempus nunc finibus. Integer luctus massa et dui facilisis scelerisque.\n\n" +
-                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam finibus ex ac sapien consectetur ultricies. Mauris iaculis iaculis enim et fermentum. Donec magna nibh, feugiat a porta non, ultrices sed quam. Fusce quis mauris ac orci fermentum ullamcorper. Mauris at nunc ornare, porttitor dolor sed, varius purus. Quisque eu ex non velit interdum euismod ut a metus. Integer eu eros imperdiet, pellentesque ipsum malesuada, feugiat tortor. Maecenas in est imperdiet, ultricies purus sit amet, vulputate felis. Maecenas vel ante finibus, auctor massa non, suscipit tortor. Morbi vestibulum neque eget ex tincidunt, ac condimentum nisl molestie. Ut ultrices diam at dolor luctus, nec tempus nunc finibus. Integer luctus massa et dui facilisis scelerisque.",
+                  child: Text( widget.photo!=null? widget.photo.description??"" :"" ,
                     textAlign: TextAlign.start,
                     overflow: _wrap ? TextOverflow.ellipsis : null,
                     maxLines: _wrap ? 2 : null,
@@ -649,7 +794,7 @@ class _PostWidgetState extends State<PostWidget> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: Text(
-                    "4 hours ago",
+                    textTimeAgo,
                     style: TextStyle(fontSize: 12, color: Colors.black38),
                   ),
                 )
